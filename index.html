@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload and Processing</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <style>
+        body {
+            text-align: center;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            align-content: center;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        input[type="file"],
+        input[type="number"],
+        button {
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid black; 
+            border-radius: 4px;
+        }
+
+        #reset-table {
+            background-color: #ff0000;
+            width: 160px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            width: 80px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .table-result {
+            display: flex;
+            justify-content: center;
+        }
+
+        #result-table {
+            width: 80%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        #result-table th,
+        #result-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: center;
+        }
+
+        #result-table th {
+            background-color: #26609d;
+            color: #fff;
+        }
+
+        #result-table tbody tr:hover {
+            background-color: #e2e6ea;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Upload and Processing</h1>
+    <div class="form-container">
+    <form id="upload-form" enctype="multipart/form-data">
+        <label for="fileUpload">Upload File</label>
+        <input type="file" id="fileUpload" name="fileUpload">
+
+        <label for="threshold">Threshold limit</label>
+        <input type="number" id="threshold" name="threshold">
+
+        <label for="selectWhereToSend">Select destination</label>
+        <select id="selectWhereToSend">
+            <option value="1" name="AWS EC2">AWS EC2</option>
+            <option value="2" name="AWS Lambda">AWS Lambda</option>
+        </select>
+
+        <br>
+        <br>
+        <button type="button" id="start-button">Start</button>
+        <br>
+        <button type="button" id="reset-table">Reset Table</button>
+    </form>
+    </div>
+    <div class="table-result">
+        <table id="result-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Threshold</th>
+                    <th>Concurrent</th>
+                    <th>Calculation Time (milliseconds)</th>
+                </tr>
+            </thead>
+            <tbody id="result-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $("#start-button").click(async function () {
+                let file = document.getElementById('fileUpload').files[0];
+                let threshold = $("#threshold").val();
+                let concurrent = threshold;
+                let selectedOption = $("#selectWhereToSend").val();
+                let selectedOptionText = $("#selectWhereToSend option:selected").text();
+                let contentSelectedType = selectedOption === '1' ? false : 'text/plain';
+                
+                let formData = new FormData();
+                formData.append('fileUpload', file);
+                formData.append('threshold', threshold);
+                formData.append('selectedOption', selectedOption);
+                formData.append('selectedOptionText', selectedOptionText);
+
+                $.ajax({
+                    url: 'http://localhost:3000/backend',
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    statusCode: { 500: function(response) {
+                        console.log(response.body);
+                        console.log(response)}
+                    },
+                    success: function (response) {
+                        if (response.status === 0) {           
+                            $("<tr><td>" +  response.service + "</td><td>" + response.threshold + "</td><td>" + response.threshold + "</td><td>" + response.time + " ms</td></tr>").appendTo($("#result-body"));
+                        } else {
+                            $("<tr><td colspan='4'>Error: " + response.message + "</td></tr>").appendTo($("#result-body"));
+                        }
+                    },
+                    error: function () {
+                        $("<tr><td colspan='4'>Error: Unable to connect to the server.</td></tr>").appendTo($("#result-body"));
+                    }
+                });
+            });
+            $("#reset-table").click(function () {
+                $("#result-body tr").remove();
+            });
+        });
+    </script>
+</body>
+</html>
